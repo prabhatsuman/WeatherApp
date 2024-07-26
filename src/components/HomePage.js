@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { View, Text, TextInput, TouchableOpacity } from "react-native";
+import { View, Text, TextInput, TouchableOpacity, ScrollView } from "react-native";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { faSearch } from "@fortawesome/free-solid-svg-icons";
 import _ from "lodash";
@@ -23,6 +23,7 @@ const HomePage = () => {
   const [generalizedCondition, setGeneralizedCondition] = useState(null);
   const [bgColor, setBgColor] = useState("#FFFFFF");
   const [errorMsg, setErrorMsg] = useState(null);
+  const [forecast, setForecast] = useState([]); // New state for storing forecast data
 
   // Function to get current day in 3-letter format
   const getCurrentDay = () => {
@@ -44,9 +45,10 @@ const HomePage = () => {
 
       // Fetch city, country name, temperature, and min/max temperatures from the latitude and longitude
       const response = await fetch(
-        `https://api.weatherapi.com/v1/forecast.json?key=${API_KEY}&q=${loc.coords.latitude},${loc.coords.longitude}&days=1`
+        `https://api.weatherapi.com/v1/forecast.json?key=${API_KEY}&q=${loc.coords.latitude},${loc.coords.longitude}&days=5`
       );
       const data = await response.json();
+      console.log(data);
       setSelectedCity({
         name: data.location.name,
         country: data.location.country,
@@ -60,6 +62,7 @@ const HomePage = () => {
 
       setMinTemperature(Math.floor(data.forecast.forecastday[0].day.mintemp_c));
       setMaxTemperature(Math.floor(data.forecast.forecastday[0].day.maxtemp_c));
+      setForecast(data.forecast.forecastday); // Set the forecast data
     })();
   }, []);
 
@@ -91,7 +94,7 @@ const HomePage = () => {
 
     // Fetch temperature and min/max temperatures for the selected city
     const response = await fetch(
-      `https://api.weatherapi.com/v1/forecast.json?key=${API_KEY}&q=${city.name}&days=1`
+      `https://api.weatherapi.com/v1/forecast.json?key=${API_KEY}&q=${city.name}&days=5`
     );
     const data = await response.json();
     setTemperature(Math.floor(data.current.temp_c)); // Set temperature in Celsius and floor the value
@@ -103,6 +106,13 @@ const HomePage = () => {
 
     setMinTemperature(Math.floor(data.forecast.forecastday[0].day.mintemp_c));
     setMaxTemperature(Math.floor(data.forecast.forecastday[0].day.maxtemp_c));
+    setForecast(data.forecast.forecastday); // Set the forecast data
+  };
+
+  const formatDay = (dateString) => {
+    const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+    const date = new Date(dateString);
+    return days[date.getDay()];
   };
 
   return (
@@ -182,6 +192,17 @@ const HomePage = () => {
                 </View>
               </View>
             )}
+            <View className="top-20 mr-3">
+            <ScrollView className="mt-8 bg-slate-100 opacity-40 rounded-2xl">
+              {forecast.slice(1).map((day, index) => (
+                <View key={index} className="flex-row justify-between items-center p-2 text-black">
+                  <Text className="text-lg">{formatDay(day.date)}</Text>
+                  <Text className="text-lg">{getGeneralizedCategory(day.day.condition.code)}</Text>
+                  <Text className="text-lg">{Math.floor(day.day.maxtemp_c)}°/{Math.floor(day.day.mintemp_c)}°</Text>
+                </View>
+              ))}
+            </ScrollView>
+            </View>
           </View>
         )}
         {errorMsg && (
