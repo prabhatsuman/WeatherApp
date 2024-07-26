@@ -1,11 +1,14 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { View, Text, TextInput, TouchableOpacity } from "react-native";
-import { styled } from "nativewind";
-import _ from "lodash";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { faSearch } from "@fortawesome/free-solid-svg-icons";
+import _ from "lodash";
 import * as Location from "expo-location";
-import API_KEY from "../constants/constants"; // Import the API key
+import {
+  API_KEY,
+  getGeneralizedCategory,
+  getBackgroundColor
+} from "../constants/constants"; // Import the necessary functions
 
 const HomePage = () => {
   const [isSearching, setIsSearching] = useState(false);
@@ -17,6 +20,8 @@ const HomePage = () => {
   const [minTemperature, setMinTemperature] = useState(null);
   const [maxTemperature, setMaxTemperature] = useState(null);
   const [condition, setCondition] = useState(null);
+  const [generalizedCondition, setGeneralizedCondition] = useState(null);
+  const [bgColor, setBgColor] = useState("#FFFFFF");
   const [errorMsg, setErrorMsg] = useState(null);
 
   // Function to get current day in 3-letter format
@@ -48,6 +53,11 @@ const HomePage = () => {
       });
       setTemperature(Math.floor(data.current.temp_c)); // Set temperature in Celsius and floor the value
       setCondition(data.current.condition.text);
+
+      const category = getGeneralizedCategory(data.current.condition.code);
+      setGeneralizedCondition(category);
+      setBgColor(getBackgroundColor(category, data.current.is_day === 1));
+
       setMinTemperature(Math.floor(data.forecast.forecastday[0].day.mintemp_c));
       setMaxTemperature(Math.floor(data.forecast.forecastday[0].day.maxtemp_c));
     })();
@@ -86,94 +96,100 @@ const HomePage = () => {
     const data = await response.json();
     setTemperature(Math.floor(data.current.temp_c)); // Set temperature in Celsius and floor the value
     setCondition(data.current.condition.text);
+
+    const category = getGeneralizedCategory(data.current.condition.code);
+    setGeneralizedCondition(category);
+    setBgColor(getBackgroundColor(category, data.current.is_day === 1));
+
     setMinTemperature(Math.floor(data.forecast.forecastday[0].day.mintemp_c));
     setMaxTemperature(Math.floor(data.forecast.forecastday[0].day.maxtemp_c));
   };
 
   return (
-    <View className="flex-1 bg-blue-200 pt-16 px-4 ">
-      <View style={{ height: "7%" }} className="z-50">
-        <View
-          className={`flex-row justify-end items-center mb-4 rounded-full ${
-            isSearching ? "bg-white" : "transparent"
-          }`}
-        >
-          {isSearching && (
-            <TextInput
-              className={`flex-1 p-2 pl-6 bg-white rounded-full`}
-              placeholder="Type city name"
-              value={query}
-              onChangeText={handleQueryChange}
-            />
-          )}
-          <TouchableOpacity
-            onPress={() => setIsSearching(!isSearching)}
-            className="rounded-full p-2 bg-slate-200"
+    <View className="flex-1" style={{ backgroundColor: bgColor, paddingTop: 16, paddingHorizontal: 16 }}>
+      <View className="flex-1 top-16">
+        <View style={{ height: "7%" }} className="z-50">
+          <View
+            className={`flex-row justify-end items-center mb-4 rounded-full ${
+              isSearching ? "bg-white" : "transparent"
+            }`}
           >
-            <FontAwesomeIcon icon={faSearch} size={24} className="text-black" />
-          </TouchableOpacity>
-        </View>
-        {isSearching && query.length > 1 && (
-          <View className="absolute w-full top-12 bg-white rounded-3xl">
-            {filteredCities.map((item) => (
-              <TouchableOpacity
-                key={item.id}
-                onPress={() =>
-                  handleSelectCity({ name: item.name, country: item.country })
-                }
-                className="p-2 border-b border-gray-200"
-              >
-                <Text className="text-lg">
-                  {item.name}, {item.country}
-                </Text>
-              </TouchableOpacity>
-            ))}
+            {isSearching && (
+              <TextInput
+                className={`flex-1 p-2 pl-6 bg-white rounded-full`}
+                placeholder="Type city name"
+                value={query}
+                onChangeText={handleQueryChange}
+              />
+            )}
+            <TouchableOpacity
+              onPress={() => setIsSearching(!isSearching)}
+              className="rounded-full p-2 bg-slate-200"
+            >
+              <FontAwesomeIcon icon={faSearch} size={24} className="text-black" />
+            </TouchableOpacity>
           </View>
-        )}
-      </View>
-      {selectedCity && (
-        <View className="pl-4 flex-1">
-          <View className="mt-6">
-            <Text className="text-4xl text-white font-bold">
-              {selectedCity.name}
-            </Text>
-            <Text className="text-lg text-white font-semibold">
-              {selectedCity.country}
-            </Text>
-          </View>
-          {temperature !== null && (
-            <View className="top-32 ">
-              <View className="flex-row items-center">
-                <Text className="text-8xl text-white">{temperature}</Text>
-                <View className="flex-col pl-1">
-                  <Text className="text-7xl pt-1 text-white">{"\u00B0"}</Text>
-                  <View className="bottom-7">
-                    {condition && (
-                      <Text className={`text-2xl text-white`}>{condition}</Text>
-                    )}
-                  </View>
-                </View>
-              </View>
-              <View className="flex-row bottom-6">
-                <Text className="text-lg text-white">{getCurrentDay()}&nbsp;</Text>
-                {minTemperature !== null && maxTemperature !== null && (
-                  <View className="flex-row justify-between w-32">
-                    <Text className="text-lg text-white">
-                      {maxTemperature}°/{minTemperature}°
-                    </Text>
-                   
-                  </View>
-                )}
-              </View>
+          {isSearching && query.length > 1 && (
+            <View className="absolute w-full top-12 bg-white rounded-3xl">
+              {filteredCities.map((item) => (
+                <TouchableOpacity
+                  key={item.id}
+                  onPress={() =>
+                    handleSelectCity({ name: item.name, country: item.country })
+                  }
+                  className="p-2 border-b border-gray-200"
+                >
+                  <Text className="text-lg">
+                    {item.name}, {item.country}
+                  </Text>
+                </TouchableOpacity>
+              ))}
             </View>
           )}
         </View>
-      )}
-      {errorMsg && (
-        <View className="mt-6 p-4">
-          <Text className="text-lg text-red-500">{errorMsg}</Text>
-        </View>
-      )}
+        {selectedCity && (
+          <View className="pl-4 flex-1">
+            <View className="mt-6">
+              <Text className="text-4xl text-white font-bold">
+                {selectedCity.name}
+              </Text>
+              <Text className="text-lg text-white font-semibold">
+                {selectedCity.country}
+              </Text>
+            </View>
+            {temperature !== null && (
+              <View className="top-32 ">
+                <View className="flex-row items-center">
+                  <Text className="text-8xl text-white">{temperature}</Text>
+                  <View className="flex-col pl-1">
+                    <Text className="text-7xl pt-1 text-white">{"\u00B0"}</Text>
+                    <View className="bottom-7">
+                      {condition && (
+                        <Text className={`text-2xl text-white`}>{generalizedCondition}</Text>
+                      )}
+                    </View>
+                  </View>
+                </View>
+                <View className="flex-row bottom-6">
+                  <Text className="text-lg text-white">{getCurrentDay()}&nbsp;</Text>
+                  {minTemperature !== null && maxTemperature !== null && (
+                    <View className="flex-row justify-between w-32">
+                      <Text className="text-lg text-white">
+                        {maxTemperature}°/{minTemperature}°
+                      </Text>
+                    </View>
+                  )}
+                </View>
+              </View>
+            )}
+          </View>
+        )}
+        {errorMsg && (
+          <View className="mt-6 p-4">
+            <Text className="text-lg text-red-500">{errorMsg}</Text>
+          </View>
+        )}
+      </View>
     </View>
   );
 };
